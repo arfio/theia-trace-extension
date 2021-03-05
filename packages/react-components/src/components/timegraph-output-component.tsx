@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { TimeGraphRowElement, TimeGraphRowElementStyle } from 'timeline-chart/lib/components/time-graph-row-element';
 import { TimeGraphChart, TimeGraphChartProviders } from 'timeline-chart/lib/layer/time-graph-chart';
+import { TimeGraphChartArrows } from 'timeline-chart/lib/layer/time-graph-chart-arrows';
 import { TimeGraphChartCursors } from 'timeline-chart/lib/layer/time-graph-chart-cursors';
 import { TimeGraphChartGrid } from 'timeline-chart/lib/layer/time-graph-chart-grid';
 import { TimeGraphChartSelectionRange } from 'timeline-chart/lib/layer/time-graph-chart-selection-range';
@@ -38,6 +39,7 @@ export class TimegraphOutputComponent extends AbstractTreeOutputComponent<Timegr
     private chartLayer: TimeGraphChart;
     private vscrollLayer: TimeGraphVerticalScrollbar;
     private chartCursors: TimeGraphChartCursors;
+    private arrowLayer: TimeGraphChartArrows;
     private horizontalContainer: React.RefObject<HTMLDivElement>;
 
     private tspDataProvider: TspDataProvider;
@@ -71,6 +73,7 @@ export class TimegraphOutputComponent extends AbstractTreeOutputComponent<Timegr
             })
         };
         this.chartLayer = new TimeGraphChart('timeGraphChart', providers, this.rowController);
+        this.arrowLayer = new TimeGraphChartArrows('timeGraphChartArrows', this.rowController);
         this.vscrollLayer = new TimeGraphVerticalScrollbar('timeGraphVerticalScrollbar', this.rowController);
         this.chartCursors = new TimeGraphChartCursors('chart-cursors', this.chartLayer, this.rowController, { color: this.props.style.cursorColor });
         this.rowController.onVerticalOffsetChangedHandler(() => {
@@ -136,6 +139,7 @@ export class TimegraphOutputComponent extends AbstractTreeOutputComponent<Timegr
         if (prevState.outputStatus === ResponseStatus.RUNNING ||
             this.state.collapsedNodes !== prevState.collapsedNodes) {
             this.chartLayer.updateChart();
+            this.arrowLayer.update();
         }
     }
 
@@ -227,7 +231,7 @@ export class TimegraphOutputComponent extends AbstractTreeOutputComponent<Timegr
             unitController={this.props.unitController}
             id='timegraph-chart'
             layer={[
-                grid, this.chartLayer, selectionRange, this.chartCursors
+                grid, this.chartLayer, selectionRange, this.chartCursors, this.arrowLayer
             ]}
         >
         </ReactTimeGraphContainer>;
@@ -278,6 +282,9 @@ export class TimegraphOutputComponent extends AbstractTreeOutputComponent<Timegr
         const newRange: TimelineChart.TimeGraphRange = { start, end };
         const newResolution: number = resolution * 0.8;
         const timeGraphData: TimelineChart.TimeGraphModel = await this.tspDataProvider.getData(orderedTreeIds, this.state.timegraphTree, newRange, this.props.style.chartWidth);
+        if (timeGraphData.arrows.length > 0) {
+            this.arrowLayer.addArrows(timeGraphData.arrows);
+        }
         return {
             rows: timeGraphData ? timeGraphData.rows : [],
             range: newRange,
